@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -7,6 +8,7 @@ using System.Net.Mime;
 using System.Linq;
 using UnityEngine.UI;
 using JetBrains.Annotations;
+using System.IO;
 
 public class AuthManager : MonoBehaviour
 {
@@ -14,24 +16,30 @@ public class AuthManager : MonoBehaviour
     private string Token;
     string Username;
     
-    [SerializeField] private TMPro.TextMeshProUGUI puntaje1;
-    [SerializeField] private TMPro.TextMeshProUGUI puntaje2;
-    [SerializeField] private TMPro.TextMeshProUGUI puntaje3;
-    [SerializeField] private TMP_InputField inputScore;  
-    [SerializeField] private TMP_Text puntajeActual;
-
     [SerializeField] private GameObject gamePanel;
-
+    [SerializeField] private GameObject loginPanel;
+    [SerializeField] private GameObject scorePanel;
+    
+    [SerializeField] private TMP_Text[] score = new TMP_Text[3];
+    
     // Start is called once before the first execution of Update after the MonoBehaviour is created
+    private void Awake()
+    {
+        gamePanel.SetActive(false);
+        loginPanel.SetActive(true);        
+        scorePanel.SetActive(false);    
+        
+    }
     void Start()
     {
         Token = PlayerPrefs.GetString("token");
         Username = PlayerPrefs.GetString("username");
         if (string.IsNullOrEmpty(Token) || string.IsNullOrEmpty(Username))
         {
-            gamePanel.SetActive(false);
             Debug.Log("No se ha encontrado el token");
-            GameObject.Find("PanelAuth").SetActive(true);
+            gamePanel.SetActive(false);
+            loginPanel.SetActive(true);        
+            scorePanel.SetActive(false);        
         }
         else
         {
@@ -40,28 +48,6 @@ public class AuthManager : MonoBehaviour
 
     }
     
-    IEnumerator ValidateToken()
-    {
-        string path = "/api/usuarios/" + Username;
-        UnityWebRequest www = UnityWebRequest.Get(Url + path);
-        www.SetRequestHeader("x-token", Token);
-        yield return www.SendWebRequest();
-
-        if (www.result == UnityWebRequest.Result.ConnectionError || www.responseCode != 200)
-        {
-            Debug.Log("Token inválido o expirado. Redirigiendo a Login...");
-            PlayerPrefs.DeleteKey("token");
-            PlayerPrefs.DeleteKey("username");
-            GameObject.Find("PanelAuth").SetActive(true);
-        }
-        else
-        {
-            GameObject.Find("PanelAuth").SetActive(false);
-            StartCoroutine(GetUsers());
-        }
-    }
-
-    // Update is called once per frame
     public void Login()
     {
         Credentials credentials = new Credentials
@@ -72,6 +58,29 @@ public class AuthManager : MonoBehaviour
 
         string postData = JsonUtility.ToJson(credentials);
         StartCoroutine(LoginPost(postData));
+    }
+    public void Register()
+    {
+        Credentials credentials = new Credentials
+        {
+            username = GameObject.Find("InputFieldUsername").GetComponent<TMP_InputField>().text,
+            password = GameObject.Find("InputFieldPassword").GetComponent<TMP_InputField>().text
+        };
+
+        string postData = JsonUtility.ToJson(credentials);
+        StartCoroutine(RegisterPost(postData));
+    }
+    public void Logout()
+    {
+        Username = "";
+        Token = "";
+        loginPanel.SetActive(true);
+        gamePanel.SetActive(false);
+        scorePanel.SetActive(false);        
+
+        PlayerPrefs.DeleteKey("username");
+        PlayerPrefs.DeleteKey("token");
+        PlayerPrefs.Save(); 
     }
     IEnumerator RegisterPost(string postData)
  {
@@ -127,7 +136,10 @@ public class AuthManager : MonoBehaviour
              PlayerPrefs.SetString("token", response.token);
              PlayerPrefs.SetString("username", response.usuario.username);
              
-             GameObject.Find("PanelAuth").SetActive(false);
+             loginPanel.SetActive(false);
+             gamePanel.SetActive(true);
+             scorePanel.SetActive(false); 
+
              StartCoroutine(GetUsers());
          }
          else
@@ -139,42 +151,6 @@ public class AuthManager : MonoBehaviour
      }
  }
  
- public void UpdateScore()
- {
-     if (int.TryParse(inputScore.text, out int newScore))
-     {
-         StartCoroutine(UpdateUserScore(newScore));
-     }
-     else
-     {
-         Debug.LogError("El valor ingresado no es un número válido.");
-     }
- }
- 
- IEnumerator UpdateUserScore(int newScore)
- {
-     string path = "/api/usuarios/" + Username;
-     UserData userData = new UserData { score = newScore };
-     string jsonData = JsonUtility.ToJson(userData);
-
-     UnityWebRequest www = UnityWebRequest.Put(Url + path, jsonData);
-     www.method = "PUT";
-     www.SetRequestHeader("Content-Type", "application/json");
-     www.SetRequestHeader("x-token", Token);
-     yield return www.SendWebRequest();
-
-     if (www.result == UnityWebRequest.Result.ConnectionError || www.responseCode != 200)
-     {
-         Debug.LogError("Error al actualizar puntaje: " + www.downloadHandler.text);
-     }
-     else
-     {
-         Debug.Log("Puntaje actualizado exitosamente.");
-         puntajeActual.text = newScore.ToString();
-         StartCoroutine(GetUsers());
-     }
- }
-
  IEnumerator GetProfile()
  {
      string path = "/api/usuarios/"+Username;
@@ -192,19 +168,35 @@ public class AuthManager : MonoBehaviour
          {
              string json = www.downloadHandler.text;
              AuthResponse response = JsonUtility.FromJson<AuthResponse>(json);
-             GameObject.Find("PanelAuth").SetActive(false);
-             StartCoroutine(GetUsers());
+             
+             loginPanel.SetActive(false);
+             gamePanel.SetActive(true);
+             scorePanel.SetActive(false);
+
          }
          else
          {
              Debug.Log("Token Vencido... redirecionar a Login");
+             
+             loginPanel.SetActive(true);
+             gamePanel.SetActive(false);
+             scorePanel.SetActive(false);
+
          }
      }
  }
 
+ public void GetScoreboard()
+ {
+     StartCoroutine(GetUsers());
+ }
+
  IEnumerator GetUsers()
  {
-     string path = "/api/usuarios/"+Username;
+     Token = PlayerPrefs.GetString("token");
+     Username = PlayerPrefs.GetString("username");
+     
+     string path = "/api/usuarios";
      UnityWebRequest www = UnityWebRequest.Get(Url + path);
      www.SetRequestHeader("x-token", Token);
      yield return www.SendWebRequest();
@@ -220,18 +212,12 @@ public class AuthManager : MonoBehaviour
              string json = www.downloadHandler.text;
              UsersList response = JsonUtility.FromJson<UsersList>(json);
 
-             UserModel[] leaderboard = response.usuarios.
-                 OrderByDescending(u => u.data.score).Take(3).ToArray();
-             
-             if (leaderboard.Length > 0) puntaje1.text = $"{leaderboard[0].username}: {leaderboard[0].data.score}";
-             if (leaderboard.Length > 1) puntaje2.text = $"{leaderboard[1].username}: {leaderboard[1].data.score}";
-             if (leaderboard.Length > 2) puntaje3.text = $"{leaderboard[2].username}: {leaderboard[2].data.score}";
-
-             UserModel currentUser = response.usuarios.FirstOrDefault(u => u.username == Username);
-             if (currentUser != null) puntajeActual.text = currentUser.data.score.ToString();
+             UserModel[] leaderboard = response.usuarios
+                 .OrderByDescending(u => u.data.score)
+                 .Take(3).ToArray();
              foreach (var user in leaderboard)
              {
-                 Debug.Log(user.username+"|"+user.data.score);
+                 Debug.Log(user.username +" | "+user.data.score);
              }
          }
          else
@@ -240,9 +226,12 @@ public class AuthManager : MonoBehaviour
          }
      }
  }
+
+
     
 }
 
+[System.Serializable]
 public class Credentials
 {
     public string username;
