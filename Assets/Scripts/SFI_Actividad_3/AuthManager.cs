@@ -19,8 +19,7 @@ public class AuthManager : MonoBehaviour
     [SerializeField] private GameObject gamePanel;
     [SerializeField] private GameObject loginPanel;
     [SerializeField] private GameObject scorePanel;
-    
-    [SerializeField] private TMP_Text[] score = new TMP_Text[3];
+    [SerializeField] TMP_Text[] score = new TMP_Text[3];
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void Awake()
@@ -188,6 +187,9 @@ public class AuthManager : MonoBehaviour
 
  public void GetScoreboard()
  {
+     loginPanel.SetActive(false);
+     gamePanel.SetActive(false);
+     scorePanel.SetActive(true);
      StartCoroutine(GetUsers());
  }
 
@@ -215,9 +217,13 @@ public class AuthManager : MonoBehaviour
              UserModel[] leaderboard = response.usuarios
                  .OrderByDescending(u => u.data.score)
                  .Take(3).ToArray();
+             int index = 0;
              foreach (var user in leaderboard)
              {
+               
                  Debug.Log(user.username +" | "+user.data.score);
+                 score[index].text = index+1 + ". " + user.username + "     " + user.data.score;
+                 index++;    
              }
          }
          else
@@ -250,7 +256,7 @@ public class UserModel
     public string _id;
     public string username;
     public bool estado;
-    public UserData data;
+    public UserData data = new UserData();
 }
 [System.Serializable]
 public class UsersList
