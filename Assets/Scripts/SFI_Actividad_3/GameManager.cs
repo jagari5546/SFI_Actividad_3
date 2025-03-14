@@ -130,4 +130,26 @@ public class GameManager : MonoBehaviour
         clickButton.interactable = false;
         Debug.Log("Se acabó el tiempo!");
     }
+    
+    public void ReiniciarJuego()
+    {
+        // Detener todas las corrutinas activas
+        StopAllCoroutines();
+
+        // Reiniciar variables
+        clickCount = 0;
+        timeLeft = gameTime;
+        isGameOver = false;
+
+        // Reiniciar textos
+        scoreText.text = "Puntaje: 0";
+        clicksText.text = "0";
+        timeText.text = timeLeft.ToString("F1");
+
+        // Desactivar el botón de clic
+        clickButton.interactable = false;
+
+        // Iniciar el juego nuevamente
+        IniciarJuego();
+    }
 }
