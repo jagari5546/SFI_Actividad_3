@@ -28,7 +28,7 @@ public class GameManager : MonoBehaviour
     private float timeLeft;
     private bool isGameOver = false;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public void IniciarJuego()
     {
         Token = PlayerPrefs.GetString("token");
         string username = PlayerPrefs.GetString("username");
@@ -40,6 +40,7 @@ public class GameManager : MonoBehaviour
         timeText.text = timeLeft.ToString("F1"); // Asegurar que el tiempo inicial se muestra correctamente
         StartCoroutine(EnableClickButtonAfterWait());
     }
+    
     IEnumerator EnableClickButtonAfterWait()
     {
         yield return new WaitForSeconds(waitTime);
