@@ -35,19 +35,32 @@ public class GameManager : MonoBehaviour
         usernameText.text = username;
         clickCount = 0;
         timeLeft = gameTime;
+        isGameOver = false;
         clickButton.interactable = false;
+        timeText.text = timeLeft.ToString("F1"); // Asegurar que el tiempo inicial se muestra correctamente
         StartCoroutine(EnableClickButtonAfterWait());
     }
     IEnumerator EnableClickButtonAfterWait()
     {
         yield return new WaitForSeconds(waitTime);
+        StartCoroutine(GameTimer());
         clickButton.interactable = true;
+    }
+    IEnumerator GameTimer()
+    {
+        while (timeLeft > 0)
+        {
+            yield return new WaitForSeconds(1f);
+            timeLeft--;
+            timeText.text = timeLeft.ToString("F1");
+        }
+        GameOver();
     }
 
     public void addClick()
     {
         clickCount++;
-        clicksText.text = scorePerClick.ToString();
+        clicksText.text = clickCount.ToString();
         int actualScore = clickCount * scorePerClick;
         scoreText.text = "Puntaje: "+actualScore.ToString();
         
@@ -99,7 +112,7 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
         
-        timeLeft -= Time.deltaTime;
+        // No es necesario restar Time.deltaTime aquí, ya que la corrutina GameTimer maneja la cuenta regresiva
         timeText.text = timeLeft.ToString("F1");
         
         if (timeLeft <= 0)
